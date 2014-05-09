@@ -1,6 +1,13 @@
 uhostserver
 ===========
 
+Install
+-------
+
+wget https://getuhost.s3-us-west-2.amazonaws.com/installserver.sh
+
+sudo sh ./installserver.sh -n <site name>
+
 Development
 -----------
 This application uses Test Kitchen (1.0). To run the tests, clone the repository, install the gems, and run test kitchen:
