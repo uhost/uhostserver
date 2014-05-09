@@ -61,12 +61,31 @@ do
   tar zxf $COOKBOOK-[0-9]*.tar.gz
 done
 
-cd ..
-
 COOKBOOKPATHS="root + '/cookbooks'"
-if [ $ENV=='dev' ]; then
+if [ "$ENV" = "dev" ]
+then
   COOKBOOKPATHS="[$COOKBOOKPATHS, '/cookbooks']"
+else
+  apt=`command -v apt-get`
+  aptpackages="git"
+  yum=`command -v yum`
+  yumpackages="git-core"
+
+  if [ -n "$apt" ]; then
+    apt-get update
+    apt-get -y install $aptpackages
+  elif [ -n "$yum" ]; then
+    yum -y install $yumpackages
+  else
+    echo "Err: no path to apt-get or yum" >&2;
+    exit 1;
+  fi
+
+  git clone https://github.com/uhost/uhostchef11server.git
+
 fi
+
+cd ..
 
 cat > uhost.rb <<EOL
 root = File.absolute_path(File.dirname(__FILE__))
