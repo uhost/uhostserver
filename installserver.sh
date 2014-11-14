@@ -9,7 +9,7 @@ then
   exit 1;
 fi
 
-CHEFSOLO=/usr/bin/chef-solo
+CHEFCLIENT=/usr/bin/chef-client
 
 while getopts e:n: option
 do
@@ -20,13 +20,13 @@ do
   esac
 done
 
-if ! test -f "$CHEFSOLO"; then
+if ! test -f "$CHEFCLIENT"; then
   # Download and install chef
   wget -qO- https://www.opscode.com/chef/install.sh | sudo bash
 fi
 
-if ! test -f "$CHEFSOLO"; then
-  echo "$CHEFSOLO not installed"
+if ! test -f "$CHEFCLIENT"; then
+  echo "$CHEFCLIENT not installed"
   exit 1;
 fi 
 
@@ -53,12 +53,12 @@ https_proxy "$HTTPS_PROXY"
 EOL
 fi
 
-if [ ! -d cookbooks ]; then
-  mkdir cookbooks
+if [ ! -d cookbooks_repo ]; then
+  mkdir cookbooks_repo
 fi
 
-cd cookbooks
-for COOKBOOK in hostsfile apt nginx bluepill rsyslog build-essential hostname ohai runit yum yum-epel
+cd cookbooks_repo
+for COOKBOOK in hostsfile apt nginx bluepill rsyslog build-essential hostname ohai runit yum yum-epel users
 do
   if [ -d $COOKBOOK ]; then
     rm -rf $COOKBOOK
@@ -67,7 +67,7 @@ do
   tar zxf $COOKBOOK-[0-9]*.tar.gz
 done
 
-COOKBOOKPATHS="root + '/cookbooks'"
+COOKBOOKPATHS="root + '/cookbooks_repo'"
 if [ "$ENV" = "dev" ]
 then
   COOKBOOKPATHS="[$COOKBOOKPATHS, '/cookbooks']"
@@ -87,11 +87,35 @@ else
     exit 1;
   fi
 
-  git clone https://github.com/uhost/uhostchef11server.git
+  if [ -d "uhostchef11server" ]; then
+    cd uhostchef11server
+    git pull
+    cd ..
+  else
+    git clone https://github.com/uhost/uhostchef11server.git
+  fi
 
 fi
 
 cd ..
+
+if [ ! -d data_bags ]; then
+  mkdir -p data_bags/users
+fi
+
+cd data_bags/users
+
+cat > uhost.json <<EOL
+{
+  "id": "uhost",
+  "gid": "uhost",
+  "shell": "/bin/bash",
+  "groups": ["uhost", "wheel"],
+  "comment": "uhost <uhost@getuhost.com>" 
+}
+EOL
+
+cd ../..
 
 cat > uhost.rb <<EOL
 root = File.absolute_path(File.dirname(__FILE__))
@@ -107,6 +131,6 @@ https_proxy "$HTTPS_PROXY"
 EOL
 fi
 
-$CHEFSOLO -c uhost.rb -o "recipe[uhostchef11server]" -N $HOSTNAME
+$CHEFCLIENT -z -c uhost.rb -o "recipe[uhostchef11server]" -N $HOSTNAME
 
 
