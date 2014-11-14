@@ -8,6 +8,14 @@ wget https://getuhost.s3-us-west-2.amazonaws.com/installserver.sh
 
 sudo sh ./installserver.sh -n <site name>
 
+Testing
+-------
+
+vagrant up
+vagrant ssh -c 'sudo sh /vagrant/installserver.sh -e dev -n localtest.getuhost.org'
+
+Edit your hosts file so that 33.33.33.10 points to localtest.getuhost.org and chef.localtest.getuhost.org
+
 Development
 -----------
 This application uses Test Kitchen (1.0). To run the tests, clone the repository, install the gems, and run test kitchen:
