@@ -58,7 +58,7 @@ if [ ! -d cookbooks_repo ]; then
 fi
 
 cd cookbooks_repo
-for COOKBOOK in hostsfile apt nginx bluepill rsyslog build-essential hostname ohai runit yum yum-epel users
+for COOKBOOK in hostsfile apt nginx bluepill rsyslog build-essential hostname ohai runit yum yum-epel users nodejs mongodb ark python windows 7-zip chef_handler
 do
   if [ -d $COOKBOOK ]; then
     rm -rf $COOKBOOK
@@ -111,7 +111,7 @@ cat > uhost.json <<EOL
   "gid": "uhost",
   "shell": "/bin/bash",
   "groups": ["uhost", "wheel"],
-  "comment": "uhost <uhost@getuhost.com>" 
+  "comment": "uhost <uhost@getuhost.org>" 
 }
 EOL
 
