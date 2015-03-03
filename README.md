@@ -11,8 +11,17 @@ sudo sh ./installserver.sh -n <site name>
 Testing
 -------
 
-vagrant up
-vagrant ssh -c 'sudo sh /vagrant/installserver.sh -e dev -n localtest.getuhost.org'
+Install [vagrant](http://docs.vagrantup.com/v2/installation/)
+
+use local virtualbox
+
+vagrant up local
+vagrant ssh local
+
+use aws
+
+vagrant up aws
+vagrant ssh aws
 
 Edit your hosts file so that 33.33.33.10 points to localtest.getuhost.org and chef.localtest.getuhost.org
 
