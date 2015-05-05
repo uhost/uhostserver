@@ -73,9 +73,9 @@ then
   COOKBOOKPATHS="[$COOKBOOKPATHS, '/cookbooks']"
 else
   apt=`command -v apt-get`
-  aptpackages="git"
+  aptpackages="git ntp"
   yum=`command -v yum`
-  yumpackages="git-core"
+  yumpackages="git-core ntp"
 
   if [ -n "$apt" ]; then
     apt-get update
