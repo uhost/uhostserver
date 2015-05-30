@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Authors and License
 #
@@ -9,8 +9,6 @@ then
   exit 1;
 fi
 
-CHEFCLIENT=/usr/bin/chef-client
-
 while getopts e:n: option
 do
   case "${option}"
@@ -20,15 +18,42 @@ do
   esac
 done
 
-if ! test -f "$CHEFCLIENT"; then
-  # Download and install chef
-  wget -qO- https://www.opscode.com/chef/install.sh | sudo bash
+echo "Updating packages"
+apt=`command -v apt-get`
+aptpackages="git ntp build-essential"
+yum=`command -v yum`
+yumpackages="git-core ntp make automake gcc gcc-c++"
+
+if [ -n "$apt" ]; then
+  apt-get update
+  apt-get -y install $aptpackages
+elif [ -n "$yum" ]; then
+  yum -y install $yumpackages
+else
+  echo "Err: no path to apt-get or yum" >&2;
+  exit 1;
+fi
+
+CHEFCLIENT=/usr/bin/chef-client
+BERKSHELF=/usr/bin/berks
+
+if [ ! -x "$CHEFCLIENT" ] && [ ! -x "$BERKSHELF" ]; then
+  echo "Downloading and installing chef $CHEFVERSION"
+  wget https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/12.04/x86_64/chefdk_0.6.0-1_amd64.deb
+  dpkg -i chefdk_0.6.0-1_amd64.deb
 fi
 
 if ! test -f "$CHEFCLIENT"; then
   echo "$CHEFCLIENT not installed"
   exit 1;
 fi 
+
+if ! test -f "$BERKSHELF"; then
+  echo "$BERKSHELF not installed"
+  exit 1;
+fi 
+
+echo "Downloading and installing berkshelf"
 
 UHOSTSERVERDIR='./uhostserver'
 
@@ -53,51 +78,42 @@ https_proxy "$HTTPS_PROXY"
 EOL
 fi
 
-if [ ! -d cookbooks_repo ]; then
-  mkdir cookbooks_repo
-fi
-
-cd cookbooks_repo
-for COOKBOOK in hostsfile apt nginx bluepill rsyslog build-essential hostname ohai runit yum yum-epel users nodejs mongodb ark python windows 7-zip chef_handler
-do
-  if [ -d $COOKBOOK ]; then
-    rm -rf $COOKBOOK
-  fi
-  knife cookbook site download $COOKBOOK
-  tar zxf $COOKBOOK-[0-9]*.tar.gz
-done
-
-COOKBOOKPATHS="root + '/cookbooks_repo'"
-if [ "$ENV" = "dev" ]
-then
-  COOKBOOKPATHS="[$COOKBOOKPATHS, '/cookbooks']"
+if [ "$ENV" = "dev" ]; then
+  UHOSTCHEF11SERVER='path: "/cookbooks/uhostchef11server"'
 else
-  apt=`command -v apt-get`
-  aptpackages="git ntp"
-  yum=`command -v yum`
-  yumpackages="git-core ntp"
-
-  if [ -n "$apt" ]; then
-    apt-get update
-    apt-get -y install $aptpackages
-  elif [ -n "$yum" ]; then
-    yum -y install $yumpackages
-  else
-    echo "Err: no path to apt-get or yum" >&2;
-    exit 1;
-  fi
-
-  if [ -d "uhostchef11server" ]; then
-    cd uhostchef11server
-    git pull
-    cd ..
-  else
-    git clone https://github.com/uhost/uhostchef11server.git
-  fi
-
+  UHOSTCHEF11SERVER='git: "https://github.com/uhost/uhostchef11server.git"'
 fi
 
-cd ..
+cat << EOF | sudo tee Berksfile > /dev/null
+source "https://supermarket.chef.io"
+
+cookbook "7-zip", "=1.0.2"
+cookbook "apt", "=2.6.1"
+cookbook "ark", "=0.9.0"
+cookbook "bluepill", "=2.3.1"
+cookbook "build-essential", "=2.1.3"
+cookbook "chef_handler", "=1.1.6"
+cookbook "hostname", "=0.3.0"
+cookbook "hostsfile", "=2.4.4"
+cookbook "mongodb", "=0.16.2"
+cookbook "nginx", "=2.7.4"
+cookbook "nodejs", "=2.2.0"
+cookbook "ohai", "=2.0.1"
+cookbook "python", "=1.4.6"
+cookbook "redisio", "=2.3.0"
+cookbook "rsyslog", "=1.13.0"
+cookbook "runit", "=1.5.12"
+cookbook "uhostchef11server", $UHOSTCHEF11SERVER
+cookbook "ulimit", "=0.3.3"
+cookbook "users", "=1.7.0"
+cookbook "windows", "=1.36.1"
+cookbook "yum", "=3.5.2"
+cookbook "yum-epel", "=0.6.0"
+EOF
+
+berks vendor
+
+COOKBOOKPATHS="root + '/berks-cookbooks'"
 
 if [ ! -d data_bags ]; then
   mkdir -p data_bags/users
@@ -130,6 +146,8 @@ http_proxy "$HTTP_PROXY"
 https_proxy "$HTTPS_PROXY"
 EOL
 fi
+
+exit;
 
 $CHEFCLIENT -z -c uhost.rb -o "recipe[uhostchef11server]" -N $HOSTNAME
 
