@@ -6,7 +6,7 @@ Install
 
 wget https://raw.githubusercontent.com/uhost/uhostserver/master/installserver.sh
 
-sudo sh ./installserver.sh -n <site name>
+sudo bash ./installserver.sh -n <site name>
 
 Testing
 -------
