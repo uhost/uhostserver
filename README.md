@@ -20,7 +20,7 @@ vagrant ssh local
 
 use aws
 
-vagrant up aws
+vagrant up aws --provider=aws
 vagrant ssh aws
 
 Edit your hosts file so that 33.33.33.10 points to localtest.getuhost.org and chef.localtest.getuhost.org
@@ -45,6 +45,6 @@ License & Authors
 -----------------
 - Author:: Mark Allen (mark@markcallen.com)
 
-Copyright:: 2014, Mark C Allen Software Inc. 
+Copyright:: 2015, Mark C Allen Software Inc. 
 
 Add License Info

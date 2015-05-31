@@ -10,6 +10,12 @@ end
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
+  if Vagrant.has_plugin?("vagrant-proxyconf")
+    config.proxy.http     = "#{ENV['HTTP_PROXY']}"
+    config.proxy.https    = "#{ENV['HTTPS_PROXY']}"
+    config.proxy.no_proxy = "localhost,127.0.0.1,.getuhost.org"
+  end
+
   config.vm.hostname = "localtest.getuhost.org"
 
   config.vm.synced_folder "../uhostchef11server", "/cookbooks/uhostchef11server"
@@ -23,22 +29,27 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     local.vm.box = "ubuntu/trusty64"
     local.vm.network :private_network, ip: "33.33.33.10"
     local.vm.boot_timeout = 1200
+    local.vm.provider "virtualbox" do |v|
+      v.memory = 4096
+      v.cpus = 2
+    end
+
   end
 
   config.vm.define "aws" do |aws|
     aws.vm.box = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
-      aws.vm.provider "ec2" do |ec2, override|
-        ec2.access_key_id = "#{ENV['AWS_ACCESS_KEY_ID']}"
-        ec2.secret_access_key = "#{ENV['AWS_SECRET_ACCESS_KEY']}"
-        ec2.keypair_name = "#{ENV['AWS_SSH_KEY_ID']}"
-        ec2.subnet_id = "subnet-2ae12073"
-        ec2.security_groups = ["sg-68e9c90d"]
-        ec2.region = "us-west-2"
+    aws.vm.provider "ec2" do |ec2, override|
+      ec2.access_key_id = "#{ENV['AWS_ACCESS_KEY_ID']}"
+      ec2.secret_access_key = "#{ENV['AWS_SECRET_ACCESS_KEY']}"
+      ec2.keypair_name = "#{ENV['AWS_SSH_KEY_ID']}"
+      ec2.subnet_id = "subnet-2ae12073"
+      ec2.security_groups = ["sg-68e9c90d"]
+      ec2.region = "us-west-2"
 
-        ec2.ami = "ami-47547277"
+      ec2.ami = "ami-47547277"
 
-        override.ssh.username = "ubuntu"
-        override.ssh.private_key_path = "#{ENV['AWS_SSH_KEY']}"
-      end
+      override.ssh.username = "ubuntu"
+      override.ssh.private_key_path = "#{ENV['AWS_SSH_KEY']}"
+    end
   end
 end

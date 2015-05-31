@@ -1,3 +1,13 @@
+## 0.3.0 (May 31, 2015)
+
+Features:
+
+  - Changed to using Berksfile
+
+Bugfixes:
+
+  - none
+
 ## 0.2.0 (Nov 13, 2014)
 
 Features:
