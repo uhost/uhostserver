@@ -33,23 +33,24 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       v.memory = 4096
       v.cpus = 2
     end
-
   end
 
   config.vm.define "aws" do |aws|
     aws.vm.box = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
-    aws.vm.provider "ec2" do |ec2, override|
-      ec2.access_key_id = "#{ENV['AWS_ACCESS_KEY_ID']}"
-      ec2.secret_access_key = "#{ENV['AWS_SECRET_ACCESS_KEY']}"
-      ec2.keypair_name = "#{ENV['AWS_SSH_KEY_ID']}"
-      ec2.subnet_id = "subnet-2ae12073"
-      ec2.security_groups = ["sg-68e9c90d"]
-      ec2.region = "us-west-2"
+  end
 
-      ec2.ami = "ami-47547277"
+  config.vm.provider "aws" do |ec2, override|
+    ec2.access_key_id = "#{ENV['AWS_ACCESS_KEY_ID']}"
+    ec2.secret_access_key = "#{ENV['AWS_SECRET_ACCESS_KEY']}"
+    ec2.keypair_name = "#{ENV['AWS_SSH_KEY_ID']}"
+    ec2.subnet_id = "subnet-2ae12073"
+    ec2.security_groups = ["sg-68e9c90d"]
+    ec2.region = "us-west-2"
+    ec2.instance_type = "m3.large"
 
-      override.ssh.username = "ubuntu"
-      override.ssh.private_key_path = "#{ENV['AWS_SSH_KEY']}"
-    end
+    ec2.ami = "ami-67526757"
+
+    override.ssh.username = "ubuntu"
+    override.ssh.private_key_path = "#{ENV['AWS_SSH_KEY']}"
   end
 end
