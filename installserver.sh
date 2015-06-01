@@ -7,6 +7,8 @@
 # Authors and License
 #
 
+export LANG="en_US.UTF-8"
+
 if [ $(id -u) -ne 0 ]
 then 
   echo "Need to run this as root, or use sudo"
