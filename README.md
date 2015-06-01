@@ -4,9 +4,9 @@ uhostserver
 Install
 -------
 
-wget https://getuhost.s3-us-west-2.amazonaws.com/installserver.sh
+wget https://raw.githubusercontent.com/uhost/uhostserver/master/installserver.sh
 
-sudo sh ./installserver.sh -n <site name>
+sudo bash ./installserver.sh -n <site name>
 
 Testing
 -------
