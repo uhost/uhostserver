@@ -1,0 +1,96 @@
+#!/bin/bash
+#
+# Uhost PreInstaller
+# https://github.com/uhost/uhostserver/
+#
+# version: 0.3.0
+#
+# License & Authors
+#
+# Author:: Mark Allen (mark@markcallen.com)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+set -e
+
+path_to_aws=$(which aws)
+if [ ! -x "$path_to_aws" ] ; then
+   echo "Can't find AWS CLI, check that its in your path"
+   exit 1;
+fi
+
+: ${AWS_ACCESS_KEY_ID:?"Need to set AWS_ACCESS_KEY_ID"}
+: ${AWS_SECRET_ACCESS_KEY:?"Need to set AWS_SECRET_ACCESS_KEY"}
+
+HOSTNAME=uhostserver
+CIDR_BLOCK="10.0.0.0/28"
+AMI=ami-a9e2da99
+INSTANCE_TYPE=t2.micro
+
+while getopts h:n:a:i: option
+do
+  case "${option}"
+  in
+    h) HOSTNAME=${OPTARG};;
+    n) CIDR_BLOCK=${OPTARG};;
+    a) AMI=${OPTARG};;
+    i) INSTANCE_TYPE=${OPTARG};;
+  esac
+done
+
+VPC_NAME=${HOSTNAME}-vpc
+SECURITY_GROUP=${HOSTNAME}-security-group
+KEY_NAME=${HOSTNAME}-key
+
+echo "Creating VPC $VPC_NAME ($CIDR_BLOCK)"
+
+vpcId=`aws ec2 create-vpc --cidr-block $CIDR_BLOCK --query 'Vpc.VpcId' --output text`
+
+aws ec2 modify-vpc-attribute --vpc-id $vpcId --enable-dns-support "{\"Value\":true}"
+aws ec2 modify-vpc-attribute --vpc-id $vpcId --enable-dns-hostnames "{\"Value\":true}"
+aws ec2 create-tags --resources $vpcId --tag "Key=Name,Value=${VPC_NAME}"
+
+internetGatewayId=`aws ec2 create-internet-gateway --query 'InternetGateway.InternetGatewayId' --output text`
+aws ec2 attach-internet-gateway --internet-gateway-id $internetGatewayId --vpc-id $vpcId
+aws ec2 create-tags --resources $internetGatewayId --tag "Key=Name,Value=${VPC_NAME}-internetgateway"
+
+subnetId=`aws ec2 create-subnet --vpc-id $vpcId --cidr-block $CIDR_BLOCK --query 'Subnet.SubnetId' --output text`
+aws ec2 create-tags --resources $subnetId --tag "Key=Name,Value=${VPC_NAME}-subnet"
+
+routeTableId=`aws ec2 create-route-table --vpc-id $vpcId --query 'RouteTable.RouteTableId' --output text`
+aws ec2 associate-route-table --route-table-id $routeTableId --subnet-id $subnetId
+aws ec2 create-route --route-table-id $routeTableId --destination-cidr-block 0.0.0.0/0 --gateway-id $internetGatewayId
+aws ec2 create-tags --resources $routeTableId --tag "Key=Name,Value=${VPC_NAME}-routetable"
+
+echo "Created VPC: $vpcId"
+
+securityGroupId=`aws ec2 create-security-group --group-name $SECURITY_GROUP --description "$SECURITY_GROUP" --vpc-id $vpcId --query 'GroupId' --output text`
+aws ec2 authorize-security-group-ingress --group-id $securityGroupId --protocol tcp --port 22 --cidr 0.0.0.0/0
+
+echo "Create Security Group: $SECURITY_GROUP ($securityGroupId)"
+
+aws ec2 create-key-pair --key-name $KEY_NAME --query 'KeyMaterial' --output text > ./${KEY_NAME}.pem
+chmod 400 ${KEY_NAME}.pem
+
+echo "Created Key: $KEY_NAME saved as ${KEY_NAME}.pem"
+
+instanceId=`aws ec2 run-instances --image-id $AMI --count 1 --instance-type $INSTANCE_TYPE --key-name $KEY_NAME  --security-group-ids $securityGroupId --subnet-id $subnetId --associate-public-ip-address --query 'Instances[0].InstanceId' --output text`
+instanceUrl=`aws ec2 describe-instances --instance-ids $instanceId --query 'Reservations[0].Instances[0].PublicDnsName' --output text`
+aws ec2 create-tags --resources $instanceId --tag "Key=Name,Value=$HOSTNAME"
+
+echo "Created instance $instanceUrl ($instanceId)"
+
+echo "Connect using: ssh -i ${KEY_NAME}.pem ubuntu@$instanceUrl"
+
+
