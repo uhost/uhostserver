@@ -34,7 +34,7 @@ fi
 : ${AWS_SECRET_ACCESS_KEY:?"Need to set AWS_SECRET_ACCESS_KEY"}
 
 HOSTNAME=uhostserver
-CIDR_BLOCK="10.0.0.0/28"
+CIDR_BLOCK="10.0.0.0/24"
 AMI=ami-afd5c09f # get ami list from http://cloud-images.ubuntu.com/locator/ec2/
 INSTANCE_TYPE=t2.small # requires hvm ami
 VOLUME_SIZE=20
