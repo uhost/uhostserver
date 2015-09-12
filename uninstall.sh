@@ -45,6 +45,7 @@ done
 
 if [ -z "$HOSTNAME" ]; then
   echo "uninstall.sh -h <name>"
+  exit 1;
 fi
 
 VPC_NAME=${HOSTNAME}-vpc
