@@ -1,3 +1,13 @@
+## 0.4.0 (Sep 19, 2015)
+
+Features:
+
+  - Added options to install chef and api using uhostchef11server and uhostapi chef recipes
+
+Bugfixes:
+
+  - Creates self signed certificate based upon the hostname input parameter
+
 ## 0.3.0 (May 31, 2015)
 
 Features:
