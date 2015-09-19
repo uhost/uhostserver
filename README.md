@@ -77,7 +77,9 @@ Edit your hosts file so that the public_ip points to api.localtest.getuhost.org 
 
 Run server spec
 
+````
 rake spec TARGET_HOST=chef.localtest.getuhost.org IDENTITY_FILE=$AWS_SSH_KEY
+````
 
 
 Development
