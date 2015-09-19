@@ -3,7 +3,7 @@
 # Uhost Installer
 # https://github.com/uhost/uhostserver/
 #
-# version: 0.3.0
+# version: 0.4.0
 #
 # License & Authors
 #
@@ -31,23 +31,32 @@ then
 fi
 
 QUICK=false
+OPTIONS=chef
 
-while getopts e:n:q: option
+while getopts e:n:q:o: option
 do
   case "${option}"
   in
     e) ENV=${OPTARG};;
     n) HOSTNAME=${OPTARG};;
-    q) QUICK=true
+    q) QUICK=true;;
+    o) OPTIONS=${OPTARG};;
   esac
 done
+
+if [ "$OPTIONS" = "" ]; then
+  echo "Need to have at least 1 option set"
+  exit 1;
+fi
+
+OPTIONS=${OPTIONS//,/$'\n'}
 
 if [ "$QUICK" = false ]; then
   echo "Updating packages"
   apt=`command -v apt-get`
-  aptpackages="git ntp build-essential"
+  aptpackages="git ntp build-essential openssl"
   yum=`command -v yum`
-  yumpackages="git-core ntp make automake gcc gcc-c++"
+  yumpackages="git-core ntp make automake gcc gcc-c++ openssl"
 
   if [ -n "$apt" ]; then
     apt-get update
@@ -65,7 +74,7 @@ BERKSHELF=/usr/bin/berks
 
 if [ ! -x "$CHEFCLIENT" ] || [ ! -x "$BERKSHELF" ]; then
   echo "Downloading and installing chef $CHEFVERSION"
-  wget https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/12.04/x86_64/chefdk_0.6.0-1_amd64.deb
+  wget -nv https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/12.04/x86_64/chefdk_0.6.0-1_amd64.deb
   dpkg -i chefdk_0.6.0-1_amd64.deb
 fi
 
@@ -102,28 +111,11 @@ https_proxy "$HTTPS_PROXY"
 EOL
 fi
 
-if [ "$ENV" = "dev" ]; then
-  UHOSTCHEF11SERVER='path: "/cookbooks/uhostchef11server"'
-else
-  UHOSTCHEF11SERVER='git: "https://github.com/uhost/uhostchef11server.git"'
-fi
-
-cat << EOF | sudo tee Berksfile > /dev/null
-source "https://supermarket.chef.io"
-cookbook "uhostchef11server", $UHOSTCHEF11SERVER
-EOF
-
-berks vendor
-
-COOKBOOKPATHS="root + '/berks-cookbooks'"
-
-if [ ! -d data_bags ]; then
+if [ ! -d data_bags/users ]; then
   mkdir -p data_bags/users
 fi
 
-cd data_bags/users
-
-cat > uhost.json <<EOL
+cat > data_bags/users/uhost.json <<EOL
 {
   "id": "uhost",
   "gid": "uhost",
@@ -133,12 +125,100 @@ cat > uhost.json <<EOL
 }
 EOL
 
-cd ../..
+country="CA"
+state="British Columbia"
+company=""
+city="Vancouver"
+organiztion=""
+email=""
+
+# Generate a passphrase
+export PASSPHRASE=$(head -c 500 /dev/urandom | LC_CTYPE=C tr -dc "a-z0-9A-Z" | head -c 128; echo)
+
+# Certificate details; replace items in angle brackets with your own info
+subj="
+C=$country
+ST=$state
+O=$company
+localityName=$city
+commonName=*.$HOSTNAME
+organizationalUnitName=$organization
+emailAddress=$email
+"
+
+encrypted_data_bag_secret="./encrypted_data_bag_secret"
+
+if [ ! -f encrypted_data_bag_secret ]; then
+  openssl rand -base64 512 | tr -d '\r\n' > $encrypted_data_bag_secret
+  chmod 600 $encrypted_data_bag_secret
+fi
+
+if [ ! -f ${HOSTNAME}.key ] || [ ! -f ${HOSTNAME}.crt ]; then
+  openssl genrsa -out ${HOSTNAME}.key -passout env:PASSPHRASE 2048
+  openssl req -new -subj "$(echo -n "$subj" | tr "\n" "/")" -key "${HOSTNAME}.key" -out "${HOSTNAME}.csr" -passin env:PASSPHRASE
+  cp ${HOSTNAME}.key ${HOSTNAME}.key.org
+  openssl rsa -in ${HOSTNAME}.key.org -out ${HOSTNAME}.key -passin env:PASSPHRASE
+  openssl x509 -req -days 3650 -in "${HOSTNAME}.csr" -signkey "${HOSTNAME}.key" -out "${HOSTNAME}.crt"
+fi
+
+CERT=`cat ${HOSTNAME}.crt | sed 's/$/\\\\n/' | tr -d '\n'`
+KEY=`cat ${HOSTNAME}.key | sed 's/$/\\\\n/' | tr -d '\n'`
+
+if [ ! -d unencrypted/certificates ]; then
+  mkdir -p unencrypted/certificates
+fi
+
+cat <<EOT > unencrypted/certificates/${HOSTNAME}.json
+{
+  "id": "$HOSTNAME",
+  "key": "$KEY",
+  "cert": "$CERT"
+}
+EOT
+
+if [ ! -d data_bags/certificates ]; then
+  knife data bag create certificates -z
+fi
+knife data bag from file certificates unencrypted/certificates/${HOSTNAME}.json --secret-file $encrypted_data_bag_secret -z
+
+
+cat > chef11server.json <<EOL
+{
+  "name": "$HOSTNAME",
+  "description": "Install uhostserver on $HOSTNAME",
+  "run_list":[
+    "recipe[uhostchef11server::default]"
+  ],
+  "chef11server": {
+    "nginx": {
+      "certificate": "$HOSTNAME"
+    }
+  }
+}
+EOL
+
+cat > uhostappserver.json <<EOL
+{
+  "name": "$HOSTNAME",
+  "description": "Install uhostserver on $HOSTNAME",
+  "run_list":[
+    "recipe[uhostapi::default]"
+  ],
+  "uhostappserver": {
+    "nginx": {
+      "certificate": "$HOSTNAME"
+    }
+  }
+}
+EOL
+
+COOKBOOKPATHS="root + '/berks-cookbooks'"
 
 cat > uhost.rb <<EOL
 root = File.absolute_path(File.dirname(__FILE__))
 file_cache_path root
 cookbook_path $COOKBOOKPATHS
+encrypted_data_bag_secret root + '/encrypted_data_bag_secret'
 verify_api_cert true
 EOL
 
@@ -149,6 +229,45 @@ https_proxy "$HTTPS_PROXY"
 EOL
 fi
 
-$CHEFCLIENT -z -c uhost.rb -o "recipe[uhostchef11server]" -N $HOSTNAME
+for opt in $OPTIONS; do
+  case "${opt}"
+  in
+    chef) 
+      echo "Installing Chef"
+      if [ "$ENV" = "dev" ]; then
+        UHOSTCHEF11SERVER='path: "/cookbooks/uhostchef11server"'
+      else
+        UHOSTCHEF11SERVER='git: "https://github.com/uhost/uhostchef11server.git"'
+      fi
+
+      cat << EOF | sudo tee Berksfile > /dev/null
+source "https://supermarket.chef.io"
+cookbook "uhostchef11server", $UHOSTCHEF11SERVER
+EOF
+
+      berks vendor
+
+      $CHEFCLIENT -z -c uhost.rb -N $HOSTNAME -j chef11server.json 
+      ;;
+    api) 
+      echo "Installing API"
+      if [ "$ENV" = "dev" ]; then
+        UHOSTAPI='path: "/cookbooks/uhostapi"'
+      else
+        UHOSTAPI='git: "https://github.com/uhost/uhostapi.git"'
+      fi
+
+      cat << EOF | sudo tee Berksfile > /dev/null
+source "https://supermarket.chef.io"
+cookbook "uhostapi", $UHOSTAPI
+EOF
+
+      berks vendor
+
+      $CHEFCLIENT -z -c uhost.rb -N $HOSTNAME -j uhostappserver.json 
+      ;; 
+  esac
+done
+
 
 

@@ -10,19 +10,20 @@ end
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
-  if Vagrant.has_plugin?("vagrant-proxyconf")
-    config.proxy.http     = "#{ENV['HTTP_PROXY']}"
-    config.proxy.https    = "#{ENV['HTTPS_PROXY']}"
-    config.proxy.no_proxy = "localhost,127.0.0.1,.getuhost.org"
-  end
+#  if Vagrant.has_plugin?("vagrant-proxyconf")
+#    config.proxy.http     = "#{ENV['HTTP_PROXY']}"
+#    config.proxy.https    = "#{ENV['HTTPS_PROXY']}"
+#    config.proxy.no_proxy = "localhost,127.0.0.1,.getuhost.org"
+#  end
 
   config.vm.hostname = "localtest.getuhost.org"
 
   config.vm.synced_folder "../uhostchef11server", "/cookbooks/uhostchef11server"
+  config.vm.synced_folder "../uhostapi", "/cookbooks/uhostapi"
 
   config.vm.provision "shell" do |s|
     s.path = "installserver.sh"
-    s.args   = ["-e", "dev", "-n", "localtest.getuhost.org"]
+    s.args   = ["-e", "dev", "-n", "localtest.getuhost.org", "-o", "chef,api"]
   end
 
   config.vm.define "local" do |local|
@@ -43,10 +44,14 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     ec2.access_key_id = "#{ENV['AWS_ACCESS_KEY_ID']}"
     ec2.secret_access_key = "#{ENV['AWS_SECRET_ACCESS_KEY']}"
     ec2.keypair_name = "#{ENV['AWS_SSH_KEY_ID']}"
-    ec2.subnet_id = "subnet-2ae12073"
-    ec2.security_groups = ["sg-68e9c90d"]
-    ec2.region = "us-west-2"
+    ec2.subnet_id = "#{ENV['AWS_SUBNET_ID']}"
+    ec2.security_groups = ["#{ENV['AWS_SECURITY_GROUP_ID']}"]
+    ec2.region = "#{ENV['AWS_DEFAULT_REGION']}"
     ec2.instance_type = "m3.large"
+    ec2.tags = {
+      'Name' => 'Uhost Vagrant',
+    }
+    ec2.associate_public_ip = true
 
     ec2.ami = "ami-67526757"
 

@@ -3,7 +3,7 @@
 # Uhost UnInstaller
 # https://github.com/uhost/uhostserver/
 #
-# version: 0.3.0
+# version: 0.4.0
 #
 # License & Authors
 #
