@@ -97,6 +97,7 @@ aws ec2 create-route --route-table-id $routeTableId --destination-cidr-block 0.0
 aws ec2 create-tags --resources $routeTableId --tag "Key=Name,Value=${VPC_NAME}-routetable"
 
 echo "Created VPC: $vpcId"
+echo "Created Subnet ${VPC_NAME}-subnet ($subnetId)"
 
 securityGroupId=`aws ec2 create-security-group --group-name $SECURITY_GROUP --description "$SECURITY_GROUP" --vpc-id $vpcId --query 'GroupId' --output text`
 aws ec2 authorize-security-group-ingress --group-id $securityGroupId --protocol tcp --port 22 --cidr 0.0.0.0/0
