@@ -97,12 +97,17 @@ aws ec2 create-route --route-table-id $routeTableId --destination-cidr-block 0.0
 aws ec2 create-tags --resources $routeTableId --tag "Key=Name,Value=${VPC_NAME}-routetable"
 
 echo "Created VPC: $vpcId"
-echo "Created Subnet ${VPC_NAME}-subnet ($subnetId)"
+
+AWS_AVAILABILITY_ZONE=$(aws ec2 describe-subnets --query "Subnets[?VpcId=='$vpcId'].AvailabilityZone" --output text)
+
+echo "Created Subnet ${VPC_NAME}-subnet ($subnetId) in $AWS_AVAILABILITY_ZONE"
 
 securityGroupId=`aws ec2 create-security-group --group-name $SECURITY_GROUP --description "$SECURITY_GROUP" --vpc-id $vpcId --query 'GroupId' --output text`
 aws ec2 authorize-security-group-ingress --group-id $securityGroupId --protocol tcp --port 22 --cidr 0.0.0.0/0
 aws ec2 authorize-security-group-ingress --group-id $securityGroupId --protocol tcp --port 80 --cidr 0.0.0.0/0
 aws ec2 authorize-security-group-ingress --group-id $securityGroupId --protocol tcp --port 443 --cidr 0.0.0.0/0
+aws ec2 authorize-security-group-ingress --group-id $securityGroupId --protocol tcp --port 3389 --cidr 0.0.0.0/0
+aws ec2 authorize-security-group-ingress --group-id $securityGroupId --protocol tcp --port 5985 --cidr 0.0.0.0/0
 aws ec2 create-tags --resources $securityGroupId --tag "Key=Name,Value=${SECURITY_GROUP}"
 
 echo "Create Security Group: $SECURITY_GROUP ($securityGroupId)"
