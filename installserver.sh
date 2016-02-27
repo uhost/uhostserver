@@ -118,7 +118,6 @@ fi
 cat > data_bags/users/uhost.json <<EOL
 {
   "id": "uhost",
-  "gid": "uhost",
   "shell": "/bin/bash",
   "groups": ["uhost", "wheel"],
   "comment": "uhost <uhost@getuhost.org>" 
