@@ -132,5 +132,3 @@ echo "Connect using: ssh -i ${KEY_NAME}.pem ubuntu@$instanceUrl"
 echo "Download: wget https://raw.githubusercontent.com/uhost/uhostserver/master/installserver.sh"
 echo "Install: sudo bash ./installserver.sh -n <site name> -o chef,api"
 
-echo "Then test using: rake spec TARGET_HOST=$instanceUrl IDENTITY_FILE=${KEY_NAME}.pem"
-
