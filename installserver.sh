@@ -73,9 +73,9 @@ CHEFCLIENT=/usr/bin/chef-client
 BERKSHELF=/usr/bin/berks
 
 if [ ! -x "$CHEFCLIENT" ] || [ ! -x "$BERKSHELF" ]; then
-  echo "Downloading and installing chef $CHEFVERSION"
-  wget -nv https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/12.04/x86_64/chefdk_0.6.0-1_amd64.deb
-  dpkg -i chefdk_0.6.0-1_amd64.deb
+  echo "Downloading and installing chef-dk 0.11.2"
+  wget -nv https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/12.04/x86_64/chefdk_0.11.2-1_amd64.deb
+  dpkg -i chefdk_0.11.2-1_amd64.deb
 fi
 
 if [ ! -x "$CHEFCLIENT" ]; then
