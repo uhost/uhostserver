@@ -253,7 +253,7 @@ EOF
       if [ "$ENV" = "dev" ]; then
         UHOSTAPI='path: "/cookbooks/uhostapi"'
       else
-        UHOSTAPI='git: "https://github.com/uhost/uhostapi.git"'
+        UHOSTAPI='git: "https://github.com/uhost/uhostapi.git", branch: "gce"'
       fi
 
       cat << EOF | sudo tee Berksfile > /dev/null
