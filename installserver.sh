@@ -247,6 +247,11 @@ EOF
       berks vendor
 
       $CHEFCLIENT -z -c uhost.rb -N $HOSTNAME -j chef11server.json 
+   
+      if [ $? != 0 ]; then
+        echo "Error processing chef"
+        exit $?
+      fi
       ;;
     api) 
       echo "Installing API"
@@ -264,6 +269,11 @@ EOF
       berks vendor
 
       $CHEFCLIENT -z -c uhost.rb -N $HOSTNAME -j uhostappserver.json 
+
+      if [ $? != 0 ]; then
+        echo "Error processing api"
+        exit $?
+      fi
       ;; 
   esac
 done
